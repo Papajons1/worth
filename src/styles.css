@@ -145,6 +145,11 @@
   box-shadow: var(--shadow-panel);
 }
 
+@utility glass-nav {
+  background-color: oklch(0.16 0.012 60 / 0.58);
+  backdrop-filter: blur(14px);
+}
+
 @utility glow {
   box-shadow: var(--shadow-glow);
 }

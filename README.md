@@ -1,11 +1,11 @@
-# Kane Westfall — Official Site & Fan Chat
+# Chris Hemsworth — Fanbase & Private Chat
 
 A movie-celebrity website with one **owner (admin)** and unlimited **fans**. Fans sign up, get a
 private one-to-one message thread, and the owner reads and answers every thread from a single
 inbox. Messages are delivered live.
 
-> Kane Westfall is a fictional actor used for the demo content. Change the name, photos and
-> filmography in `src/routes/index.tsx` and `src/components/SiteHeader.tsx` to make it yours.
+> This is a Chris Hemsworth fanbase demo. Update the content and imagery in `src/routes/index.tsx`
+> and `src/components/SiteHeader.tsx` as needed.
 
 ## Deploying to Vercel
 
@@ -40,13 +40,13 @@ behavior. Configure Google OAuth redirect URIs using the Supabase callback URL, 
 
 ## For fans — how to sign up and chat
 
-1. Open the site and click **Sign in** (top right) or **Chat with Kane**.
+1. Open the site and click **Sign in** (top right) or **Chat with Chris**.
 2. Choose one of:
    - **Continue with Google (Gmail)** — one click, no password to remember.
    - **Sign up** tab — enter a display name, your email and a password. If email confirmation
      is on, click the link in your inbox before your first sign-in.
 3. You land on **My chat**. Type a message and press **Enter** (Shift+Enter for a new line).
-4. When the owner replies, it appears in the same thread instantly — no refresh needed.
+4. When the administrator replies, it appears in the same thread instantly — no refresh needed.
 5. **Sign out** from the top-right button any time.
 
 Fans can only ever see their own conversation.
@@ -64,7 +64,7 @@ claim it becomes the permanent owner, and the claim closes forever after that.
    email + password. Use the email you want to own the site with.
 2. Once signed in, go to **`/admin`** in the address bar.
 3. You will see the **Owner access** card saying no owner has been set yet.
-4. Click **Claim owner role**. You are now the site owner.
+4. Enter the administrator claim code and click **Claim owner role**.
 5. From then on, signing in normally at `/auth` takes you straight to the **Owner inbox**, and
    the header shows **Owner inbox** instead of **My chat**.
 

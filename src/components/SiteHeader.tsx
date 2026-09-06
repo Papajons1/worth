@@ -30,10 +30,25 @@ export function SiteHeader() {
   }, [user]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-border/60 glass-nav">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4">
-        <Link to="/" className="font-display text-xl tracking-widest">
-          <span className="text-gold">CH</span>
+        <Link to="/" className="block" aria-label="Chris Hemsworth fanbase home">
+          <span
+            aria-hidden="true"
+            className="block h-9 w-24 bg-primary"
+            style={{
+              maskImage:
+                "url(https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Chris_Hemsworth_Signature.svg/250px-Chris_Hemsworth_Signature.svg.png?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail)",
+              maskPosition: "center",
+              maskRepeat: "no-repeat",
+              maskSize: "contain",
+              WebkitMaskImage:
+                "url(https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Chris_Hemsworth_Signature.svg/250px-Chris_Hemsworth_Signature.svg.png?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail)",
+              WebkitMaskPosition: "center",
+              WebkitMaskRepeat: "no-repeat",
+              WebkitMaskSize: "contain",
+            }}
+          />
         </Link>
         <nav className="flex items-center gap-2">
           {user ? (

@@ -210,6 +210,13 @@ const MILESTONES = [
   },
 ];
 
+function filmSlug(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 function Index() {
   const { user, isAdmin } = useAuth();
 
@@ -232,7 +239,7 @@ function Index() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg">
                 <Link to={user ? (isAdmin ? "/admin" : "/chat") : "/auth"}>
-                  {user ? (isAdmin ? "Open owner inbox" : "Open my chat") : "Chat with Kane"}
+                  {user ? (isAdmin ? "Open owner inbox" : "Open my chat") : "Chat with Chris"}
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
@@ -268,9 +275,7 @@ function Index() {
             {FILMS.map((film) => (
               <article key={film.title} className="panel flex min-w-0 gap-3 p-3 sm:gap-4">
                 <a
-                  href={film.url}
-                  target="_blank"
-                  rel="noreferrer"
+                  href={`/films/${filmSlug(film.title)}`}
                   aria-label={`Read about ${film.title} on Wikipedia`}
                   className="block w-20 shrink-0 sm:w-24"
                 >
@@ -290,9 +295,7 @@ function Index() {
                   <p className="text-xs uppercase tracking-widest text-primary">{film.year}</p>
                   <h3 className="mt-1 text-lg leading-tight">
                     <a
-                      href={film.url}
-                      target="_blank"
-                      rel="noreferrer"
+                      href={`/films/${filmSlug(film.title)}`}
                       className="transition-colors hover:text-primary"
                     >
                       {film.title}
@@ -458,20 +461,31 @@ function Index() {
           href="https://en.wikipedia.org/wiki/File:Chris_Hemsworth_Signature.svg"
           target="_blank"
           rel="noreferrer"
+          aria-label="View Chris Hemsworth signature source"
           className="mt-5 inline-block transition-opacity hover:opacity-70"
         >
-          <img
-            src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Chris_Hemsworth_Signature.svg/250px-Chris_Hemsworth_Signature.svg.png?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail"
-            alt="Chris Hemsworth signature"
-            width="250"
-            height="94"
-            loading="lazy"
+          <span
+            role="img"
+            aria-label="Chris Hemsworth signature"
+            className="block h-20 w-56 bg-primary"
+            style={{
+              maskImage:
+                "url(https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Chris_Hemsworth_Signature.svg/250px-Chris_Hemsworth_Signature.svg.png?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail)",
+              maskPosition: "center",
+              maskRepeat: "no-repeat",
+              maskSize: "contain",
+              WebkitMaskImage:
+                "url(https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Chris_Hemsworth_Signature.svg/250px-Chris_Hemsworth_Signature.svg.png?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail)",
+              WebkitMaskPosition: "center",
+              WebkitMaskRepeat: "no-repeat",
+              WebkitMaskSize: "contain",
+            }}
           />
         </a>
-        <p className="mt-4">
-          This is Chris Hemsworth's Official fanbase website 🤍 Chat with Chris.
+        <p className="mx-auto mt-4 max-w-xs leading-5">Chris Hemsworth's Fanbase website.</p>
+        <p className="mx-auto mt-2 max-w-xs leading-5">
+          Copyright &copy; 2026 . All rights reserved.
         </p>
-        <p className="mt-2">Copyright &copy; 2026 Chris Hemsworth Fanbase. All rights reserved.</p>
       </footer>
     </main>
   );

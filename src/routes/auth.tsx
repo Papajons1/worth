@@ -11,16 +11,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Kane Westfall Fan Club" },
+      { title: "Sign in — Chris Hemsworth Fanbase" },
       {
         name: "description",
         content:
-          "Create a free fan account or sign in with Google to message Kane Westfall directly.",
+          "Create a free fan account or sign in with Google to join the Chris Hemsworth fanbase.",
       },
-      { property: "og:title", content: "Sign in — Kane Westfall Fan Club" },
+      { property: "og:title", content: "Sign in — Chris Hemsworth Fanbase" },
       {
         property: "og:description",
-        content: "Join the fan club and start a private chat with Kane.",
+        content: "Join the fanbase and start a private chat.",
       },
     ],
   }),
@@ -109,7 +109,7 @@ function AuthPage() {
         <div className="text-center">
           <h1 className="text-4xl">Fan club access</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sign in to open a private chat with Kane. New here? Create an account in seconds.
+            Sign in to open a private chat. New here? Create an account in seconds.
           </p>
         </div>
 
@@ -166,7 +166,7 @@ function AuthPage() {
                     id="signup-name"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="How Kane should call you"
+                    placeholder="How should we call you?"
                   />
                 </div>
                 <div className="space-y-2">
@@ -199,8 +199,7 @@ function AuthPage() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground">
-          Site owner? Sign in with the account you claimed the owner role with — see the README for
-          the one-time owner claim step.
+          Administrator? Sign in with your administrator account.
         </p>
       </div>
     </main>

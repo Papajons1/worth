@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { RefreshCw } from "lucide-react";
+import { Mic, Paperclip, RefreshCw, Square } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,9 @@ export type Message = {
   sender_id: string;
   body: string;
   created_at: string;
+  attachment_url: string | null;
+  attachment_type: string | null;
+  attachment_name: string | null;
 };
 
 type Props = {
@@ -38,7 +41,12 @@ export function ChatThread({
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [recording, setRecording] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunks = useRef<Blob[]>([]);
   const [ownerProfile, setOwnerProfile] = useState<Profile | null>(null);
+  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
 
   async function refreshMessages() {
@@ -115,11 +123,38 @@ export function ChatThread({
   async function send(e: React.FormEvent) {
     e.preventDefault();
     const body = draft.trim();
-    if (!body) return;
+    if (!body && !attachment) return;
     setSending(true);
+    let attachmentUrl: string | null = null;
+    let attachmentType: string | null = null;
+    let attachmentName: string | null = null;
+    if (attachment) {
+      const path = `${fanId}/${crypto.randomUUID()}-${attachment.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("chat-media")
+        .upload(path, attachment, {
+          contentType: attachment.type,
+          upsert: false,
+        });
+      if (uploadError) {
+        setSending(false);
+        toast.error(uploadError.message);
+        return;
+      }
+      attachmentUrl = path;
+      attachmentType = attachment.type;
+      attachmentName = attachment.name;
+    }
     const { data, error } = await supabase
       .from("messages")
-      .insert({ fan_id: fanId, sender_id: currentUserId, body })
+      .insert({
+        fan_id: fanId,
+        sender_id: currentUserId,
+        body,
+        attachment_url: attachmentUrl,
+        attachment_type: attachmentType,
+        attachment_name: attachmentName,
+      })
       .select()
       .single();
     setSending(false);
@@ -128,11 +163,84 @@ export function ChatThread({
       return;
     }
     setDraft("");
+    setAttachment(null);
     setMessages((prev) => (prev.some((m) => m.id === data.id) ? prev : [...prev, data as Message]));
   }
 
+  useEffect(() => {
+    let active = true;
+    const paths = messages
+      .filter((message) => message.attachment_url)
+      .map((message) => message.attachment_url as string);
+    if (paths.length === 0) return;
+    void Promise.all(
+      paths.map(async (path) => {
+        const { data } = await supabase.storage.from("chat-media").createSignedUrl(path, 3600);
+        return [path, data?.signedUrl] as const;
+      }),
+    ).then((entries) => {
+      if (!active) return;
+      setMediaUrls((current) => ({
+        ...current,
+        ...Object.fromEntries(
+          entries.filter((entry): entry is [string, string] => Boolean(entry[1])),
+        ),
+      }));
+    });
+    return () => {
+      active = false;
+    };
+  }, [messages]);
+
+  function chooseAttachment(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("Files must be smaller than 100 MB.");
+      return;
+    }
+    if (
+      !file.type.startsWith("image/") &&
+      !file.type.startsWith("video/") &&
+      !file.type.startsWith("audio/")
+    ) {
+      toast.error("Only images, videos, and audio files are supported.");
+      return;
+    }
+    setAttachment(file);
+  }
+
+  async function toggleRecording() {
+    if (recording) {
+      recorderRef.current?.stop();
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      toast.error("Voice recording is not supported by this browser.");
+      return;
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+    recordingChunks.current = [];
+    recorder.ondataavailable = (event) => recordingChunks.current.push(event.data);
+    recorder.onstop = () => {
+      stream.getTracks().forEach((track) => track.stop());
+      setAttachment(
+        new File(
+          [new Blob(recordingChunks.current, { type: recorder.mimeType })],
+          "voice-note.webm",
+          { type: recorder.mimeType },
+        ),
+      );
+      setRecording(false);
+    };
+    recorderRef.current = recorder;
+    recorder.start();
+    setRecording(true);
+  }
+
   return (
-    <div className="flex h-[70vh] flex-col panel">
+    <div className="flex min-h-[78vh] flex-col panel">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <span className="text-sm font-medium">Messages</span>
         {showRefresh && (
@@ -186,6 +294,25 @@ export function ChatThread({
                   )}
                 >
                   <p className="whitespace-pre-wrap">{m.body}</p>
+                  {m.attachment_url && mediaUrls[m.attachment_url] && (
+                    <div className="mt-2 max-w-full">
+                      {m.attachment_type?.startsWith("image/") ? (
+                        <img
+                          src={mediaUrls[m.attachment_url]}
+                          alt={m.attachment_name ?? "Shared image"}
+                          className="max-h-72 max-w-full rounded-md object-contain"
+                        />
+                      ) : m.attachment_type?.startsWith("video/") ? (
+                        <video
+                          controls
+                          className="max-h-72 max-w-full rounded-md"
+                          src={mediaUrls[m.attachment_url]}
+                        />
+                      ) : (
+                        <audio controls className="max-w-full" src={mediaUrls[m.attachment_url]} />
+                      )}
+                    </div>
+                  )}
                   <span className="mt-1 block text-[10px] opacity-70">
                     {new Date(m.created_at).toLocaleString()}
                   </span>
@@ -198,10 +325,31 @@ export function ChatThread({
       </div>
 
       <form onSubmit={send} className="flex items-end gap-2 border-t border-border p-3">
+        <input
+          type="file"
+          accept="image/*,video/*,audio/*"
+          className="hidden"
+          id={`media-${fanId}`}
+          onChange={chooseAttachment}
+        />
+        <Button type="button" variant="ghost" size="icon" asChild title="Attach media">
+          <label htmlFor={`media-${fanId}`}>
+            <Paperclip className="h-4 w-4" />
+          </label>
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => void toggleRecording()}
+          title={recording ? "Stop recording" : "Record voice note"}
+        >
+          {recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        </Button>
         <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Write a message…"
+          placeholder={attachment ? attachment.name : "Write a message…"}
           rows={2}
           className="resize-none"
           onKeyDown={(e) => {

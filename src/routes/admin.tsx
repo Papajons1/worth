@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Owner inbox — Kane Westfall Fan Club" },
+      { title: "Owner inbox — Chris Hemsworth Fanbase" },
       {
         name: "description",
         content: "Private owner dashboard for reading and replying to fan messages.",
@@ -44,6 +44,7 @@ function AdminPage() {
   const [claiming, setClaiming] = useState(false);
   const [claimCode, setClaimCode] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [fanSearch, setFanSearch] = useState("");
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", replace: true });
@@ -123,7 +124,7 @@ function AdminPage() {
       return;
     }
     if (data) {
-      toast.success("You are now the site owner.");
+      toast.success("Administrator access granted.");
       await refreshRole();
     } else {
       toast.error("An owner already exists for this site.");
@@ -164,12 +165,12 @@ function AdminPage() {
                 onClick={claimOwner}
                 disabled={claiming || !claimCode}
               >
-                Claim owner role
+                Claim administrator access
               </Button>
             </>
           ) : (
             <p className="mt-3 text-sm text-muted-foreground">
-              This area is reserved for the site owner. Head to your fan chat instead.
+              This area is reserved for the account administrator. Head to your fan chat instead.
             </p>
           )}
         </div>
@@ -196,36 +197,77 @@ function AdminPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-[260px_1fr]">
-        <aside className="panel h-[70vh] overflow-y-auto p-2">
-          {fans.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">No fans have signed up yet.</p>
-          ) : (
-            fans.map((fan) => (
-              <button
-                key={fan.id}
-                onClick={() => setSelected(fan.id)}
-                className={cn(
-                  "w-full rounded-lg px-3 py-2 text-left text-sm transition-colors",
-                  selected === fan.id ? "bg-primary text-primary-foreground" : "hover:bg-secondary",
-                )}
-              >
-                {fan.avatar_url ? (
-                  <img
-                    src={fan.avatar_url}
-                    alt=""
-                    className="mr-2 inline-block h-8 w-8 rounded-full object-cover align-middle"
-                  />
-                ) : (
-                  <span className="mr-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary align-middle text-xs">
-                    {fan.display_name.charAt(0).toUpperCase()}
-                  </span>
-                )}
-                <span className="block font-medium">{fan.display_name}</span>
-                <span className="block truncate text-xs opacity-70">{fan.email}</span>
-              </button>
-            ))
+      <div className="space-y-4">
+        <aside className="panel overflow-x-auto p-2">
+          <div className="mb-2 flex items-center justify-between gap-2 px-2">
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Fans
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFanSearch((value) => (value ? "" : " "))}
+            >
+              Add Fans
+            </Button>
+          </div>
+          {fanSearch !== "" && (
+            <Input
+              value={fanSearch.trim()}
+              onChange={(event) => setFanSearch(event.target.value)}
+              placeholder="Search name or email"
+              className="mb-2"
+              autoFocus
+            />
           )}
+          <div className="flex min-w-max gap-2">
+            {fans.filter((fan) => {
+              const query = fanSearch.trim().toLowerCase();
+              return (
+                !query ||
+                fan.display_name.toLowerCase().includes(query) ||
+                fan.email?.toLowerCase().includes(query)
+              );
+            }).length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">No fans have signed up yet.</p>
+            ) : (
+              fans
+                .filter((fan) => {
+                  const query = fanSearch.trim().toLowerCase();
+                  return (
+                    !query ||
+                    fan.display_name.toLowerCase().includes(query) ||
+                    fan.email?.toLowerCase().includes(query)
+                  );
+                })
+                .map((fan) => (
+                  <button
+                    key={fan.id}
+                    onClick={() => setSelected(fan.id)}
+                    className={cn(
+                      "min-w-40 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                      selected === fan.id
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-secondary",
+                    )}
+                  >
+                    {fan.avatar_url ? (
+                      <img
+                        src={fan.avatar_url}
+                        alt=""
+                        className="mr-2 inline-block h-8 w-8 rounded-full object-cover align-middle"
+                      />
+                    ) : (
+                      <span className="mr-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary align-middle text-xs">
+                        {fan.display_name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="block font-medium">{fan.display_name}</span>
+                    <span className="block truncate text-xs opacity-70">{fan.email}</span>
+                  </button>
+                ))
+            )}
+          </div>
         </aside>
 
         {selected ? (
@@ -237,7 +279,7 @@ function AdminPage() {
             emptyHint="No messages in this thread yet."
           />
         ) : (
-          <div className="panel flex h-[70vh] items-center justify-center text-sm text-muted-foreground">
+          <div className="panel flex min-h-[78vh] items-center justify-center text-sm text-muted-foreground">
             Select a fan conversation.
           </div>
         )}
