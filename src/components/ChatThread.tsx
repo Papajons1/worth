@@ -359,7 +359,12 @@ export function ChatThread({
             }
           }}
         />
-        <Button type="submit" disabled={sending || !draft.trim()}>
+        {attachment && (
+          <span className="max-w-32 truncate text-xs text-muted-foreground" title={attachment.name}>
+            {attachment.name}
+          </span>
+        )}
+        <Button type="submit" disabled={sending || (!draft.trim() && !attachment)}>
           Send
         </Button>
       </form>
