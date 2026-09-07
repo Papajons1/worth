@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function SiteHeader() {
   const { user, isAdmin } = useAuth();
@@ -10,7 +11,8 @@ export function SiteHeader() {
     display_name: string;
     avatar_url: string | null;
   } | null>(null);
-  const [ownerActivity, setOwnerActivity] = useState(false);
+  const [activity, setActivity] = useState(false);
+  const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
 
   useEffect(() => {
     if (!user) {
@@ -31,27 +33,44 @@ export function SiteHeader() {
   }, [user]);
 
   useEffect(() => {
-    if (!user || !isAdmin) {
-      setOwnerActivity(false);
+    if (!user) {
+      setActivity(false);
       return;
     }
     const checkActivity = async () => {
-      const [{ data: profiles }, { data: messages }] = await Promise.all([
-        supabase.from("profiles").select("id, created_at"),
-        supabase.from("messages").select("fan_id, sender_id, created_at, read_at"),
+      const [{ data: messages }, { data: reactions }, { data: profiles }] = await Promise.all([
+        supabase.from("messages").select("fan_id, sender_id, read_at"),
+        supabase.from("message_reactions").select("message_id, user_id"),
+        isAdmin ? supabase.from("profiles").select("id") : Promise.resolve({ data: null }),
       ]);
-      const newestFan = (profiles ?? []).some((fan) => !localStorage.getItem(`owner-fan-seen:${fan.id}`));
-      const unreadMessage = (messages ?? []).some((message) => message.sender_id !== user.id && !message.read_at);
-      setOwnerActivity(newestFan || unreadMessage);
+      const unreadMessage = (messages ?? []).some((message) =>
+        message.sender_id !== user.id && !message.read_at && (isAdmin || message.fan_id === user.id),
+      );
+      const newReaction = (reactions ?? []).some((reaction) => reaction.user_id !== user.id);
+      const newFan = isAdmin && (profiles ?? []).some((profile) => !localStorage.getItem(`owner-fan-seen:${profile.id}`));
+      setActivity(unreadMessage || newReaction || Boolean(newFan));
     };
     void checkActivity();
     const channel = supabase
-      .channel("owner-navbar-activity")
+      .channel(`navbar-activity-${user.id}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => void checkActivity())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, () => void checkActivity())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "message_reactions" }, () => void checkActivity())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "profiles" }, () => void checkActivity())
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [user, isAdmin]);
+
+  useEffect(() => {
+    const handleOnline = () => setOnline(true);
+    const handleOffline = () => setOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 glass-nav">
@@ -80,7 +99,7 @@ export function SiteHeader() {
               <Button asChild variant="ghost" size="sm">
                 <Link to={isAdmin ? "/admin" : "/chat"} className="relative">
                   {isAdmin ? "Owner inbox" : "My chat"}
-                  {isAdmin && ownerActivity && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-yellow-400" aria-label="New owner inbox activity" />}
+                  {activity && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-yellow-400" aria-label="New activity" />}
                 </Link>
               </Button>
               <Link
@@ -93,10 +112,10 @@ export function SiteHeader() {
                   <img
                     src={profile.avatar_url}
                     alt=""
-                    className="h-8 w-8 rounded-full object-cover"
+                    className={cn("h-8 w-8 rounded-full object-cover ring-2", online ? "ring-emerald-400" : "ring-muted")}
                   />
                 ) : (
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs">
+                  <span className={cn("flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs ring-2", online ? "ring-emerald-400" : "ring-muted")}>
                     {(profile?.display_name || user.email || "U").charAt(0).toUpperCase()}
                   </span>
                 )}

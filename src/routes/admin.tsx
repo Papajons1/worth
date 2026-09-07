@@ -70,7 +70,7 @@ function AdminPage() {
             .order("created_at", { ascending: true }),
           supabase
             .from("messages")
-            .select("fan_id, sender_id, created_at")
+            .select("fan_id, sender_id, created_at, read_at")
             .order("created_at", { ascending: false }),
         ]);
       if (profilesError) {
