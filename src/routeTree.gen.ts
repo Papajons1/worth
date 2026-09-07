@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as FilmsSlugRouteImport } from './routes/films.$slug'
+import { Route as FansIdRouteImport } from './routes/fans.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +47,11 @@ const FilmsSlugRoute = FilmsSlugRouteImport.update({
   path: '/films/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FansIdRoute = FansIdRouteImport.update({
+  id: '/fans/$id',
+  path: '/fans/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof ChatRoute
   '/settings': typeof SettingsRoute
   '/films/$slug': typeof FilmsSlugRoute
+  '/fans/$id': typeof FansIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/chat': typeof ChatRoute
   '/settings': typeof SettingsRoute
   '/films/$slug': typeof FilmsSlugRoute
+  '/fans/$id': typeof FansIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,13 +79,14 @@ export interface FileRoutesById {
   '/chat': typeof ChatRoute
   '/settings': typeof SettingsRoute
   '/films/$slug': typeof FilmsSlugRoute
+  '/fans/$id': typeof FansIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths: '/' | '/admin' | '/auth' | '/chat' | '/settings'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/admin' | '/auth' | '/chat' | '/settings'
-  id: '__root__' | '/' | '/admin' | '/auth' | '/chat' | '/settings' | '/films/$slug'
+  id: '__root__' | '/' | '/admin' | '/auth' | '/chat' | '/settings' | '/films/$slug' | '/fans/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -87,6 +96,7 @@ export interface RootRouteChildren {
   ChatRoute: typeof ChatRoute
   SettingsRoute: typeof SettingsRoute
   FilmsSlugRoute: typeof FilmsSlugRoute
+  FansIdRoute: typeof FansIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -133,6 +143,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FilmsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/fans/$id': {
+      id: '/fans/$id'
+      path: '/fans/$id'
+      fullPath: '/fans/$id'
+      preLoaderRoute: typeof FansIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -143,6 +160,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChatRoute: ChatRoute,
   SettingsRoute: SettingsRoute,
   FilmsSlugRoute: FilmsSlugRoute,
+  FansIdRoute: FansIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

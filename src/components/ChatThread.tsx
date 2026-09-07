@@ -29,6 +29,7 @@ type Profile = {
   id?: string;
   display_name: string;
   avatar_url: string | null;
+  banner_message?: string;
 };
 
 export function ChatThread({
@@ -256,6 +257,11 @@ export function ChatThread({
           </Button>
         )}
       </div>
+      {fanId === currentUserId && ownerProfile?.banner_message && (
+        <div className="border-b border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
+          {ownerProfile.banner_message}
+        </div>
+      )}
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <p className="mt-10 text-center text-sm text-muted-foreground">{emptyHint}</p>

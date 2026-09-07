@@ -92,6 +92,7 @@ export type Database = {
     };
     Functions: {
       claim_owner_role: { Args: { p_claim_code: string }; Returns: boolean };
+      clear_fan_messages: { Args: { p_fan_id: string }; Returns: boolean };
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"];
@@ -102,8 +103,10 @@ export type Database = {
       owner_exists: { Args: never; Returns: boolean };
       get_owner_profile: {
         Args: never;
-        Returns: { id: string; display_name: string; avatar_url: string | null }[];
+        Returns: { id: string; display_name: string; avatar_url: string | null; banner_message: string }[];
       };
+      remove_fan: { Args: { p_fan_id: string }; Returns: boolean };
+      set_owner_banner: { Args: { p_message: string }; Returns: boolean };
     };
     Enums: {
       app_role: "admin" | "fan";
