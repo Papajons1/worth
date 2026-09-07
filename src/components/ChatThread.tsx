@@ -51,6 +51,7 @@ export function ChatThread({
   const [search, setSearch] = useState("");
   const [typing, setTyping] = useState(false);
   const [reactionCounts, setReactionCounts] = useState<Record<string, Record<string, number>>>({});
+  const [reactionMenu, setReactionMenu] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   async function refreshMessages() {
@@ -97,6 +98,16 @@ export function ChatThread({
       )
       .on("broadcast", { event: "typing" }, ({ payload }) => {
         if (payload?.userId !== currentUserId) setTyping(Boolean(payload?.isTyping));
+      })
+      .on("broadcast", { event: "reaction" }, ({ payload }) => {
+        if (
+          payload?.userId !== currentUserId &&
+          localStorage.getItem(`notifications:${currentUserId}`) === "on" &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          new Notification("New reaction", { body: `${payload.reactionEmoji} reacted to a message` });
+        }
       })
       .subscribe();
 
@@ -247,6 +258,12 @@ export function ChatThread({
     } else {
       await supabase.from("message_reactions").insert({ message_id: messageId, user_id: currentUserId, reaction });
     }
+    const reactionEmoji = reaction === "heart" ? "❤️" : reaction === "like" ? "👍" : "😂";
+    void supabase.channel(`messages-${fanId}`).send({
+      type: "broadcast",
+      event: "reaction",
+      payload: { userId: currentUserId, reactionEmoji },
+    });
     void loadReactions();
   }
 
@@ -385,10 +402,18 @@ export function ChatThread({
                       )}
                     </div>
                   )}
-                  <div className="mt-2 flex gap-1">
-                    <button type="button" onClick={() => void toggleReaction(m.id, "heart")} className="text-xs opacity-70 hover:opacity-100" title="React with heart"><Heart className="inline h-3 w-3" /> {reactionCounts[m.id]?.heart ?? 0}</button>
-                    <button type="button" onClick={() => void toggleReaction(m.id, "like")} className="text-xs opacity-70 hover:opacity-100" title="React with like"><ThumbsUp className="inline h-3 w-3" /> {reactionCounts[m.id]?.like ?? 0}</button>
-                    <button type="button" onClick={() => void toggleReaction(m.id, "laugh")} className="text-xs opacity-70 hover:opacity-100" title="React with laugh"><Laugh className="inline h-3 w-3" /> {reactionCounts[m.id]?.laugh ?? 0}</button>
+                  <div className="relative mt-2 flex gap-1">
+                    <button type="button" onClick={() => setReactionMenu(reactionMenu === m.id ? null : m.id)} className="rounded-full px-1 text-sm opacity-80 hover:bg-background/20" title="Add reaction">😊</button>
+                    {reactionMenu === m.id && (
+                      <div className="absolute bottom-6 left-0 z-10 flex gap-1 rounded-full border border-border bg-background px-2 py-1 shadow-lg">
+                        <button type="button" onClick={() => { void toggleReaction(m.id, "heart"); setReactionMenu(null); }} className="text-lg" title="Heart">❤️</button>
+                        <button type="button" onClick={() => { void toggleReaction(m.id, "like"); setReactionMenu(null); }} className="text-lg" title="Like">👍</button>
+                        <button type="button" onClick={() => { void toggleReaction(m.id, "laugh"); setReactionMenu(null); }} className="text-lg" title="Laugh">😂</button>
+                      </div>
+                    )}
+                    {reactionCounts[m.id]?.heart ? <span className="text-xs">❤️ {reactionCounts[m.id].heart}</span> : null}
+                    {reactionCounts[m.id]?.like ? <span className="text-xs">👍 {reactionCounts[m.id].like}</span> : null}
+                    {reactionCounts[m.id]?.laugh ? <span className="text-xs">😂 {reactionCounts[m.id].laugh}</span> : null}
                   </div>
                   <span className="mt-1 block text-[10px] opacity-70">
                     {new Date(m.created_at).toLocaleString()}

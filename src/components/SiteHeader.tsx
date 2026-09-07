@@ -10,6 +10,7 @@ export function SiteHeader() {
     display_name: string;
     avatar_url: string | null;
   } | null>(null);
+  const [ownerActivity, setOwnerActivity] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -28,6 +29,29 @@ export function SiteHeader() {
     window.addEventListener("profile-updated", loadProfile);
     return () => window.removeEventListener("profile-updated", loadProfile);
   }, [user]);
+
+  useEffect(() => {
+    if (!user || !isAdmin) {
+      setOwnerActivity(false);
+      return;
+    }
+    const checkActivity = async () => {
+      const [{ data: profiles }, { data: messages }] = await Promise.all([
+        supabase.from("profiles").select("id, created_at"),
+        supabase.from("messages").select("fan_id, sender_id, created_at, read_at"),
+      ]);
+      const newestFan = (profiles ?? []).some((fan) => !localStorage.getItem(`owner-fan-seen:${fan.id}`));
+      const unreadMessage = (messages ?? []).some((message) => message.sender_id !== user.id && !message.read_at);
+      setOwnerActivity(newestFan || unreadMessage);
+    };
+    void checkActivity();
+    const channel = supabase
+      .channel("owner-navbar-activity")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => void checkActivity())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "profiles" }, () => void checkActivity())
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [user, isAdmin]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 glass-nav">
@@ -54,7 +78,10 @@ export function SiteHeader() {
           {user ? (
             <>
               <Button asChild variant="ghost" size="sm">
-                <Link to={isAdmin ? "/admin" : "/chat"}>{isAdmin ? "Owner inbox" : "My chat"}</Link>
+                <Link to={isAdmin ? "/admin" : "/chat"} className="relative">
+                  {isAdmin ? "Owner inbox" : "My chat"}
+                  {isAdmin && ownerActivity && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-yellow-400" aria-label="New owner inbox activity" />}
+                </Link>
               </Button>
               <Link
                 to="/settings"
