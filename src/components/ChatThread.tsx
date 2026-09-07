@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Mic, Paperclip, RefreshCw, Square } from "lucide-react";
+import { Heart, Laugh, Mic, Paperclip, RefreshCw, Search, Square, ThumbsUp, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,6 +48,9 @@ export function ChatThread({
   const recordingChunks = useRef<Blob[]>([]);
   const [ownerProfile, setOwnerProfile] = useState<Profile | null>(null);
   const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [reactionCounts, setReactionCounts] = useState<Record<string, Record<string, number>>>({});
   const bottomRef = useRef<HTMLDivElement>(null);
 
   async function refreshMessages() {
@@ -92,6 +95,9 @@ export function ChatThread({
           );
         },
       )
+      .on("broadcast", { event: "typing" }, ({ payload }) => {
+        if (payload?.userId !== currentUserId) setTyping(Boolean(payload?.isTyping));
+      })
       .subscribe();
 
     return () => {
@@ -120,6 +126,20 @@ export function ChatThread({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
+
+  useEffect(() => {
+    void loadReactions();
+  }, [messages.length]);
+
+  useEffect(() => {
+    if (!messages.some((message) => message.sender_id !== currentUserId && !message.read_at)) return;
+    void supabase
+      .from("messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("fan_id", fanId)
+      .neq("sender_id", currentUserId)
+      .is("read_at", null);
+  }, [messages.length, fanId, currentUserId]);
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
@@ -168,6 +188,12 @@ export function ChatThread({
     setMessages((prev) => (prev.some((m) => m.id === data.id) ? prev : [...prev, data as Message]));
   }
 
+  function updateDraft(value: string) {
+    setDraft(value);
+    const channel = supabase.channel(`messages-${fanId}`);
+    void channel.send({ type: "broadcast", event: "typing", payload: { userId: currentUserId, isTyping: value.length > 0 } });
+  }
+
   useEffect(() => {
     let active = true;
     const paths = messages
@@ -192,6 +218,37 @@ export function ChatThread({
       active = false;
     };
   }, [messages]);
+
+  async function loadReactions() {
+    const ids = messages.map((message) => message.id);
+    if (!ids.length) return;
+    const { data } = await supabase
+      .from("message_reactions")
+      .select("message_id, reaction")
+      .in("message_id", ids);
+    const next: Record<string, Record<string, number>> = {};
+    for (const reaction of data ?? []) {
+      next[reaction.message_id] ??= {};
+      next[reaction.message_id][reaction.reaction] = (next[reaction.message_id][reaction.reaction] ?? 0) + 1;
+    }
+    setReactionCounts(next);
+  }
+
+  async function toggleReaction(messageId: string, reaction: "heart" | "like" | "laugh") {
+    const { data: existing } = await supabase
+      .from("message_reactions")
+      .select("message_id")
+      .eq("message_id", messageId)
+      .eq("user_id", currentUserId)
+      .eq("reaction", reaction)
+      .maybeSingle();
+    if (existing) {
+      await supabase.from("message_reactions").delete().match({ message_id: messageId, user_id: currentUserId, reaction });
+    } else {
+      await supabase.from("message_reactions").insert({ message_id: messageId, user_id: currentUserId, reaction });
+    }
+    void loadReactions();
+  }
 
   function chooseAttachment(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -257,16 +314,25 @@ export function ChatThread({
           </Button>
         )}
       </div>
+      <div className="flex items-center gap-2 border-b border-border px-4 py-2 text-xs">
+        <Search className="h-3 w-3 text-muted-foreground" />
+        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search chat" className="min-w-0 flex-1 bg-transparent outline-none" />
+        {search && <button type="button" onClick={() => setSearch("")} aria-label="Clear search"><X className="h-3 w-3" /></button>}
+      </div>
       {fanId === currentUserId && ownerProfile?.banner_message && (
-        <div className="border-b border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
-          {ownerProfile.banner_message}
+        <div className="overflow-hidden border-b border-primary/30 bg-primary/10 py-3 text-sm text-foreground">
+          <div className="owner-banner-track flex min-w-max">
+            <span className="px-8">{ownerProfile.banner_message}</span>
+            <span aria-hidden="true" className="px-8">{ownerProfile.banner_message}</span>
+          </div>
         </div>
       )}
+      {typing && <div className="border-b border-border px-4 py-2 text-xs text-muted-foreground">Someone is typing…</div>}
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {messages.length === 0 ? (
           <p className="mt-10 text-center text-sm text-muted-foreground">{emptyHint}</p>
         ) : (
-          messages.map((m) => {
+          messages.filter((message) => !search.trim() || message.body.toLowerCase().includes(search.trim().toLowerCase())).map((m) => {
             const mine = m.sender_id === currentUserId;
             return (
               <div
@@ -319,6 +385,11 @@ export function ChatThread({
                       )}
                     </div>
                   )}
+                  <div className="mt-2 flex gap-1">
+                    <button type="button" onClick={() => void toggleReaction(m.id, "heart")} className="text-xs opacity-70 hover:opacity-100" title="React with heart"><Heart className="inline h-3 w-3" /> {reactionCounts[m.id]?.heart ?? 0}</button>
+                    <button type="button" onClick={() => void toggleReaction(m.id, "like")} className="text-xs opacity-70 hover:opacity-100" title="React with like"><ThumbsUp className="inline h-3 w-3" /> {reactionCounts[m.id]?.like ?? 0}</button>
+                    <button type="button" onClick={() => void toggleReaction(m.id, "laugh")} className="text-xs opacity-70 hover:opacity-100" title="React with laugh"><Laugh className="inline h-3 w-3" /> {reactionCounts[m.id]?.laugh ?? 0}</button>
+                  </div>
                   <span className="mt-1 block text-[10px] opacity-70">
                     {new Date(m.created_at).toLocaleString()}
                   </span>
@@ -354,7 +425,7 @@ export function ChatThread({
         </Button>
         <Textarea
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => updateDraft(e.target.value)}
           placeholder={attachment ? attachment.name : "Write a message…"}
           rows={2}
           className="resize-none"

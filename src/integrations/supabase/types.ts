@@ -8,6 +8,27 @@ export type Database = {
   };
   public: {
     Tables: {
+      message_reactions: {
+        Row: {
+          created_at: string;
+          message_id: string;
+          reaction: "heart" | "like" | "laugh";
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          message_id: string;
+          reaction: "heart" | "like" | "laugh";
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          message_id?: string;
+          reaction?: "heart" | "like" | "laugh";
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       messages: {
         Row: {
           attachment_name: string | null;
@@ -17,6 +38,7 @@ export type Database = {
           created_at: string;
           fan_id: string;
           id: string;
+          read_at: string | null;
           sender_id: string;
         };
         Insert: {
@@ -27,6 +49,7 @@ export type Database = {
           created_at?: string;
           fan_id: string;
           id?: string;
+          read_at?: string | null;
           sender_id: string;
         };
         Update: {
@@ -37,6 +60,7 @@ export type Database = {
           created_at?: string;
           fan_id?: string;
           id?: string;
+          read_at?: string | null;
           sender_id?: string;
         };
         Relationships: [];

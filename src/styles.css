@@ -150,6 +150,27 @@
   backdrop-filter: blur(14px);
 }
 
+@keyframes owner-banner-marquee {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.owner-banner-track {
+  animation: owner-banner-marquee 18s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .owner-banner-track {
+    animation: none;
+    justify-content: center;
+    min-width: 100%;
+  }
+}
+
 @utility glow {
   box-shadow: var(--shadow-glow);
 }
