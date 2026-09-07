@@ -54,6 +54,12 @@ export function ChatThread({
   const [reactionMenu, setReactionMenu] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (!reactionMenu) return;
+    const timer = window.setTimeout(() => setReactionMenu(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [reactionMenu]);
+
   async function refreshMessages() {
     const { data, error } = await supabase
       .from("messages")
